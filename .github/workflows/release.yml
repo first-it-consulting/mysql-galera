@@ -27,19 +27,27 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump chart version
+      - name: Package Helm chart
+        run: helm package .
+
+      - name: Get chart version
+        id: version
         run: |
-          helm package . --destination .
-          CHART_FILE=$(ls mysql-galera-*.tgz | head -1)
           VERSION=$(grep '^version:' Chart.yaml | awk '{print $2}')
-          echo "Releasing version $VERSION"
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push origin "v${VERSION}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: mysql-galera-*.tgz
+          files: mysql-galera-${{ steps.version.outputs.version }}.tgz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
