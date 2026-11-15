@@ -22,11 +22,6 @@ jobs:
         with:
           version: v4.3.1
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Package Helm chart
         run: helm package .
 
@@ -47,6 +42,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
           files: mysql-galera-${{ steps.version.outputs.version }}.tgz
           generate_release_notes: true
         env:
