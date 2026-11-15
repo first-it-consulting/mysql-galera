@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Run helm lint
+        run: helm lint .
+
+  template:
+    name: Helm Template
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Run helm template (default values)
+        run: helm template test . --set image.tag=8.0.42
+
+      - name: Run helm template (custom values)
+        run: helm template test . -f ci/test-values.yaml
+
+  test:
+    name: Helm Test
+    runs-on: ubuntu-latest
+    needs: [template]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Install kubeval (schema validation)
+        run: |
+          curl -sL https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-$(uname -s)-amd64.tar.gz | tar xz
+          sudo mv kubeval /usr/local/bin/
+
+      - name: Render and validate manifests
+        run: |
+          helm template test . --set image.tag=8.0.42 | kubeval --strict
+
+  chart-test:
+    name: Chart Tests
+    runs-on: ubuntu-latest
+    needs: [template]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Run helm test template
+        run: helm template test . --set image.tag=8.0.42 --show-only templates/tests/test-connection.yaml

@@ -1,0 +1,20 @@
+# Test values for CI validation
+image:
+  tag: "8.0.42"
+
+replicas: 3
+
+mysql:
+  rootpw: "testRootPassword"
+  user:
+    name: "testUser"
+    passwd: "testPassword"
+
+resources:
+  requests:
+    memory: 4Gi
+    cpu: 0.2
+    storage: 2Gi
+
+service:
+  port: 30006
